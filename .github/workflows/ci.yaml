@@ -88,4 +88,8 @@ jobs:
         if: github.ref_name == 'prod'
         run: aws s3 sync ./build/ s3://${{ env.BUCKET_PROD }} --delete
 
+      - name: Invalidation CF    
+        if: github.ref_name == 'devel'
+        run: aws cloudfront create-invalidation --distribution-id E2MID6CL2MH9WS --paths '/*'
+
       
