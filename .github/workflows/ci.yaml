@@ -8,6 +8,11 @@ on:
     branches:
       - main 
 
+env:
+    BUCKET_DEVEL: 'app-devel-site'
+    BUCKET_PROD: 'app-prod-site'
+    BUCKET_STAGE: 'app-stage-site'
+
 jobs:
   build:
     runs-on: ubuntu-latest
@@ -37,3 +42,45 @@ jobs:
 
       - name: Build project
         run: npm run build
+
+      - name: Archive artifacts
+      - uses: actions/upload-artifact@v4
+        with:
+          name: build-folder
+          path: build/
+          
+
+  deploy-s3:
+    needs: build
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Check out code
+        uses: actions/checkout@v2
+
+      - name: Download artifact
+        uses: actions/download-artifact@v4
+        with:
+          name: build-folder
+          path: ./build/
+
+      - name: Configure AWS credentials
+        uses: aws-actions/configure-aws-credentials@v1
+        with:
+          aws-access-key-id: ${{ secrets.AWS_ACCESS_KEY_ID }}
+          aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
+          aws-region: us-east-1
+
+      - name: Deploy S3 (devel)
+        if: github.ref_name == 'devel'
+        run: aws s3 sync ./build/ s3://${{ env.BUCKET_DEVEL }} --delete
+
+      - name: Deploy S3 (stage)
+        if: github.ref_name == 'stage'
+        run: aws s3 sync ./build/ s3://${{ env.BUCKET_STAGE }} --delete      
+
+      - name: Deploy S3 (prod)    
+        if: github.ref_name == 'prod'
+        run: aws s3 sync ./build/ s3://${{ env.BUCKET_PROD }} --delete
+
+      

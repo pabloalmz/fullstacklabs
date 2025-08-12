@@ -6,6 +6,33 @@ resource "aws_s3_bucket" "logsapp" {
   bucket = "${var.bucket_name}-logs"
 }
 
+resource "aws_s3_bucket_policy" "applicationpolicy" {
+  bucket = aws_s3_bucket.application.id
+
+  policy = <<POLICY
+{
+  "Version": "2012-10-17",
+  "Id": "MYBUCKETPOLICY",
+  "Statement": [
+    {
+      "Effect": "Allow",
+      "Principal": "*",
+      "Action": "s3:GetObject",
+      "Resource": "${aws_s3_bucket.application.arn}/*"
+    }
+  ]
+}
+POLICY
+}
+
+resource "aws_s3_bucket_ownership_controls" "owner" {
+  bucket = aws_s3_bucket.logsapp.id
+
+  rule {
+    object_ownership = "BucketOwnerPreferred"
+  }
+}  
+
 locals {
   s3_origin_id = "myS3Origin"
 }
@@ -13,7 +40,7 @@ locals {
 resource "aws_cloudfront_distribution" "s3_distribution" {
   origin {
     domain_name              = aws_s3_bucket.application.bucket_regional_domain_name
-    origin_access_control_id = aws_cloudfront_origin_access_control.default.id
+    origin_access_control_id = aws_cloudfront_origin_access_control.oacnew.id
     origin_id                = local.s3_origin_id
   }
 
@@ -110,8 +137,8 @@ resource "aws_cloudfront_distribution" "s3_distribution" {
   }
 }
 
-resource "aws_cloudfront_origin_access_control" "default" {
-  name                              = "oac"
+resource "aws_cloudfront_origin_access_control" "oacnew" {
+  name                              = "oacnew"
   description                       = "Policy"
   origin_access_control_origin_type = "s3"
   signing_behavior                  = "always"
